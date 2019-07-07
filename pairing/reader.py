@@ -24,6 +24,9 @@ class Reader:
     IDX_TOKEN = 0
     IDX_LABEL = 1
     IDX_PAIR = 2
+    STATE_O = 0
+    STATE_ASPECT = 1
+    STATE_SENTIMENT = 2
 
     @classmethod
     def read_file(cls, path):
@@ -60,8 +63,33 @@ class Reader:
 
     @classmethod
     def _parse_sentence(cls, sentence):
-        # TODO implement this
-        return sentence
+        result = {'token': [element[cls.IDX_TOKEN] for element in sentence],
+                  'label': [element[cls.IDX_LABEL] for element in sentence],
+                  'aspect': [{'start': index,
+                              'length': 1}
+                             for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
+                             if label == 'B-ASPECT'],
+                  'sentiment': [{'start': index,
+                                 'length': 1,
+                                 'index_aspect': []}
+                                for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
+                                if label == 'B-SENTIMENT']}
+
+        for index, element in enumerate(result['aspect']):
+            index_token = element['start'] + 1
+            while index_token < len(sentence) and sentence[index_token][cls.IDX_LABEL] == 'I-ASPECT':
+                result['aspect'][index]['length'] += 1
+                index_token += 1
+        for index, element in enumerate(result['sentiment']):
+            index_token = element['start'] + 1
+            while index_token < len(sentence) and sentence[index_token][cls.IDX_LABEL] == 'I-SENTIMENT':
+                result['sentiment'][index]['length'] += 1
+                index_token += 1
+            if len(sentence[element['start']]) >= 3:
+                splitted_pair = sentence[element['start']][cls.IDX_PAIR].split(',')
+                result['sentiment'][index]['index_aspect'] = [int(index_aspect) for index_aspect in splitted_pair]
+
+        return result
 
 
 if __name__ == '__main__':
