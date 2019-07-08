@@ -9,6 +9,8 @@ separated by tab.
 *   Third string (optional) is only possible for token labelled with B-SENTIMENT. It is an integer x to show that this
     sentiment is related to x-th aspect of this sentence. If the sentiment have no relation with any aspect, this string
     would not exist (there are only 2 strings in this row)
+
+The result is document representation in dict/json format
 """
 
 import definition
@@ -17,7 +19,7 @@ import definition
 class Reader:
 
     """
-    Utility class
+    Reader utility class
     """
 
     # constants
@@ -93,4 +95,4 @@ class Reader:
 
 
 if __name__ == '__main__':
-    print(Reader.read_file(definition.DATA_PAIRED_SMALLSAMPLE))
+    print(Reader.read_file(definition.DATA_PAIRED_SMALLSAMPLE)[0])
