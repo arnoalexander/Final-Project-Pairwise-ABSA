@@ -2,31 +2,38 @@
 Represent word into dense vector
 """
 
-import gensim
+from gensim.models import FastText
+from gensim.models.callbacks import CallbackAny2Vec
 import numpy as np
 import definition
 
 
-class FastTextEmbedding:
+class Embedding:
 
     """
     Wrapper class for gensim FastText
     """
 
     def __init__(self, *args, **kwargs):
-        self.model = gensim.models.FastText(*args, **kwargs)
+        self.model = FastText(*args, **kwargs)
 
     def save(self, path):
         self.model.save(path)
 
     def load(self, path):
-        self.model = gensim.models.FastText.load(path)
+        self.model = FastText.load(path)
 
     def build_vocab(self, *args, **kwargs):
         self.model.build_vocab(*args, **kwargs)
 
-    def train(self, *args, **kwargs):
-        self.model.train(*args, **kwargs)
+    def train(self, *args, total_examples=None, epochs=None, verbose=False, **kwargs):
+        if total_examples is None:
+            total_examples = self.model.corpus_count
+        if epochs is None:
+            epochs = self.model.epochs
+        if verbose:
+            kwargs['callbacks'] = [EmbeddingEpochCallback()]
+        self.model.train(*args, total_examples=total_examples, epochs=epochs, **kwargs)
 
     def get_vector_word(self, word):
         try:
@@ -52,14 +59,25 @@ class FastTextEmbedding:
         return result / max(1, sentence_found)
 
 
+class EmbeddingEpochCallback(CallbackAny2Vec):
+
+    def __init__(self):
+        self.epoch = 1
+
+    def on_epoch_begin(self, model):
+        print("Epoch #{}...".format(self.epoch))
+        self.epoch += 1
+
+
 if __name__ == '__main__':
     document = [["the", "quick", "brown", "fox"], ["jumps", "over", "a", "lazy", "dog"]]
     test_word = "thick"
     test_sentence = ["there", "is", "a", "test", "duck"]
-    embedding = FastTextEmbedding(min_count=1, size=5, min_n=3)
+    embedding = Embedding(min_count=1, size=5, min_n=3)
     embedding.build_vocab(document)
+    embedding.train(document, verbose=True)
     embedding.save(definition.MODEL_EMBEDDING_SAMPLEFASTTEXT)
-    new_embedding = FastTextEmbedding()
+    new_embedding = Embedding()
     new_embedding.load(definition.MODEL_EMBEDDING_SAMPLEFASTTEXT)
     print(new_embedding.get_vector_word(test_word))
     print(new_embedding.get_vector_sentence(test_sentence))
