@@ -13,3 +13,8 @@ DATA_PAIRED_SAMPLE = os.path.join(DATA_LABELLED, 'sample-pair.txt')
 DATA_PAIRED_TRAIN = os.path.join(DATA_LABELLED, 'train-pair.txt')
 DATA_RAW = os.path.join(DATA, 'raw')
 DATA_RAW_FILE = os.path.join(DATA_RAW, 'ceres_review_until_20181201.csv')
+
+MODEL = os.path.join(ROOT, 'model')
+MODEL_EMBEDDING = os.path.join(MODEL, 'embedding')
+MODEL_EMBEDDING_FASTTEXT = os.path.join(MODEL_EMBEDDING, 'fasttext.bin')
+MODEL_EMBEDDING_SAMPLEFASTTEXT = os.path.join(MODEL_EMBEDDING, 'fasttext_sample.bin')
