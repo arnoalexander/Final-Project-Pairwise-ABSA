@@ -89,7 +89,7 @@ class Reader:
                 index_token += 1
             if len(sentence[element['start']]) >= 3:
                 splitted_pair = sentence[element['start']][cls.IDX_PAIR].split(',')
-                result['sentiment'][index]['index_aspect'] = [int(index_aspect) for index_aspect in splitted_pair]
+                result['sentiment'][index]['index_aspect'] = [int(index_aspect) - 1 for index_aspect in splitted_pair]
 
         return result
 
