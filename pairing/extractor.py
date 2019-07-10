@@ -52,8 +52,8 @@ class Extractor:
         result = dict()
 
         # TODO remove this upon real implementation. only for test purpose
-        result['aspect'] = tokens[aspect['start']]
-        result['sentiment'] = tokens[sentiment['start']]
+        # result['aspect'] = tokens[aspect['start']]
+        # result['sentiment'] = tokens[sentiment['start']]
 
         # TODO add more feature
         # Statistics Feature
