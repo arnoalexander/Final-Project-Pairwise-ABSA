@@ -15,10 +15,9 @@ class Preprocessor:
             return []
         else:
             result = sentence.lower()
+            result = re.sub(r'(\.+|\,+|\!+|\?+|\-+|\/+|\&+|\:+|\(+|\)+)', lambda x: ' ' + x.group()[0] + ' ', result)
 
-            result = re.sub(r'(\.+|\-+|\,+|\/+|\&+|\:+|\!+|\?+)', lambda x: ' ' + x.group()[0] + ' ', result)
-
-            tokenizer = RegexpTokenizer(r'[\w\.\-\,\/\&\:\!\?]+')
+            tokenizer = RegexpTokenizer(r'[\w\.\,\!\?\-\/\&\:\(\)]+')
             result = tokenizer.tokenize(result)
 
             return result

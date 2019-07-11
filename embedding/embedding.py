@@ -65,8 +65,11 @@ class EmbeddingEpochCallback(CallbackAny2Vec):
         self.epoch = 1
 
     def on_epoch_begin(self, model):
-        print("Epoch #{}...".format(self.epoch))
+        print("Epoch #{}/{}...".format(self.epoch, model.epochs), end='\r')
         self.epoch += 1
+
+    def on_train_end(self, model):
+        print("")
 
 
 if __name__ == '__main__':
