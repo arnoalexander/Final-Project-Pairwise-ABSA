@@ -7,19 +7,34 @@ The result is tabular data with defined features
 """
 
 import pandas as pd
+import numpy as np
 from tqdm import tqdm
-from pairing.reader import Reader
+from pairing import Reader
+from embedding import Embedding
 import definition
 
 
 class Extractor:
 
     """
-    Extractor utility class
+    Extractor class
     """
 
-    @classmethod
-    def extract_data(cls, data, progress_bar=True):
+    def __init__(self, embedding_filename=None, embedding_model=None):
+        """
+        Initialize object.
+        Set embedding_filename (path to saved base model of Embedding class) OR embedding model (initialized Embedding
+        object. If both are specified, embedding_model is preferred. If none, there won't be embedding feature
+        """
+        if embedding_model is not None:
+            self.embedding_model = embedding_model
+        elif embedding_filename is not None:
+            self.embedding_model = Embedding()
+            self.embedding_model.load(embedding_filename)
+        else:
+            self.embedding_model = None
+
+    def extract_data(self, data, progress_bar=True):
         """
         dict/json list of sentences to tabular data
         """
@@ -27,29 +42,32 @@ class Extractor:
         if progress_bar:
             data = tqdm(data)
         for sentence in data:
-            result += cls.extract_sentence(sentence)
+            result += self.extract_sentence(sentence)
         return pd.DataFrame(result)
 
-    @classmethod
-    def extract_sentence(cls, sentence):
+    def extract_sentence(self, sentence):
         """
         dict/json of single sentences to tabular data
         """
         result = []
         for aspect_idx, aspect in enumerate(sentence['aspect']):
             for sentiment in sentence['sentiment']:
-                result_element = cls._extract_features_aspect_sentiment(aspect, sentiment, sentence['token'])
-                result_element['target'] = cls._extract_class_aspect_sentiment(aspect_idx, sentiment)
+                result_element = self._extract_features_aspect_sentiment(aspect, sentiment, sentence['token'])
+                result_element['target'] = self._extract_class_aspect_sentiment(aspect_idx, sentiment)
                 result.append(result_element)
         return result
 
-    @classmethod
-    def _extract_class_aspect_sentiment(cls, aspect_idx, sentiment):
+    @staticmethod
+    def _extract_class_aspect_sentiment(aspect_idx, sentiment):
         return 1 if aspect_idx in sentiment['index_aspect'] else 0
 
-    @classmethod
-    def _extract_features_aspect_sentiment(cls, aspect, sentiment, tokens):
+    def _extract_features_aspect_sentiment(self, aspect, sentiment, tokens):
         result = dict()
+
+        # Intermediate Values
+        aspect_embedding = self._extract_feature_vector_sequence(aspect['start'], aspect['length'], tokens)
+        sentiment_embedding = self._extract_feature_vector_sequence(sentiment['start'], sentiment['length'], tokens)
+        sentence_embedding = self._extract_feature_vector_sentence(tokens)
 
         # TODO remove this upon real implementation. only for test purpose
         # result['aspect'] = tokens[aspect['start']]
@@ -59,26 +77,45 @@ class Extractor:
         # Statistics Feature
         result['len_aspect_word'] = aspect['length']
         result['len_sentiment_word'] = sentiment['length']
-        result['len_aspect_char'] = cls._extract_feature_len_sequence_char(aspect['start'], aspect['length'], tokens)
-        result['len_sentiment_char'] = cls._extract_feature_len_sequence_char(sentiment['start'], sentiment['length'], tokens)
+        result['len_aspect_char'] = self._extract_feature_numchar_sequence(aspect['start'], aspect['length'], tokens)
+        result['len_sentiment_char'] = self._extract_feature_numchar_sequence(sentiment['start'], sentiment['length'], tokens)
         result['position_aspect'] = aspect['start']
         result['position_sentiment'] = sentiment['start']
         result['dist_start'] = abs(aspect['start'] - sentiment['start'])
-        result['dist_endpoint'] = cls._extract_feature_dist_endpoint(aspect, sentiment)
+        result['dist_endpoint'] = self._extract_feature_dist_endpoint(aspect, sentiment)
 
+        # Semantic Feature
+        for i in range(len(aspect_embedding)):
+            result['aspect_v_{}'.format(i)] = aspect_embedding[i]
+        for i in range(len(sentiment_embedding)):
+            result['sentiment_v_{}'.format(i)] = sentiment_embedding[i]
+        for i in range(len(sentence_embedding)):
+            result['sentence_v_{}'.format(i)] = sentence_embedding[i]
+        
         return result
 
-    @classmethod
-    def _extract_feature_len_sequence_char(cls, start, length, tokens):
+    @staticmethod
+    def _extract_feature_numchar_sequence(start, length, tokens):
         return sum([len(token) for token in tokens[start:start+length]])
 
-    @classmethod
-    def _extract_feature_dist_endpoint(cls, aspect, sentiment):
+    @staticmethod
+    def _extract_feature_dist_endpoint(aspect, sentiment):
         if aspect['start'] < sentiment['start']:
             return sentiment['start'] - (aspect['start'] + aspect['length'] - 1)
         return aspect['start'] - (sentiment['start'] + sentiment['length'] - 1)
 
+    def _extract_feature_vector_sequence(self, start, length, tokens):
+        if self.embedding_model is None:
+            return np.array([])
+        return self.embedding_model.get_vector_sentence(sentence=tokens[start:start+length], min_n=length, max_n=length)
+
+    def _extract_feature_vector_sentence(self, tokens):
+        if self.embedding_model is None:
+            return np.array([])
+        return self.embedding_model.get_vector_sentence(sentence=tokens)
+
 
 if __name__ == '__main__':
     data = Reader.read_file(definition.DATA_PAIRED_SMALLSAMPLE)
-    print(Extractor.extract_data(data))
+    extractor = Extractor()
+    print(extractor.extract_data(data))

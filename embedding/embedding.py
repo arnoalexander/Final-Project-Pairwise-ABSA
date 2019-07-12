@@ -36,6 +36,9 @@ class Embedding:
         self.model.train(*args, total_examples=total_examples, epochs=epochs, **kwargs)
 
     def get_vector_word(self, word, use_norm=False, handle_oov=True):
+        """
+        Get vector representation of a word
+        """
         if handle_oov:
             try:
                 result = self.model.wv.word_vec(word=word, use_norm=use_norm)
@@ -46,6 +49,9 @@ class Embedding:
 
     def get_vector_sentence(self, sentence, min_n=3, max_n=3, use_norm_ngram_word=False, use_norm_word=False,
                             use_norm_ngram_char=False, handle_oov=True):
+        """
+        Get vector representation of a sentence
+        """
         if min_n > max_n or min_n > len(sentence):
             min_n = len(sentence)
             max_n = len(sentence)
@@ -62,7 +68,7 @@ class Embedding:
                     ngram_word=ngram, use_norm_word=use_norm_word, use_norm_ngram_char=use_norm_ngram_char,
                     handle_oov=False)
                 if use_norm_ngram_word:
-                    ngram_vector = self._normalize_vector(ngram_vector)
+                    ngram_vector = self.normalize_vector(ngram_vector)
                 result += ngram_vector
                 ngrams_found += 1
             except KeyError:
@@ -71,6 +77,13 @@ class Embedding:
             raise KeyError('all word level n-grams are absent from model')
         else:
             return result / max(1, ngrams_found)
+
+    @staticmethod
+    def normalize_vector(arr):
+        arr_length = np.linalg.norm(arr)
+        if arr_length == 0.0:
+            return arr
+        return arr / arr_length
 
     @staticmethod
     def _get_ngram_word(sentence, n):
@@ -84,14 +97,13 @@ class Embedding:
         return result
 
     def _get_vector_ngram_word(self, ngram_word, use_norm_word=False, use_norm_ngram_char=False, handle_oov=True):
-        # TODO optional oov handling
         words_found = 0
         result = np.zeros(self.model.wv.vector_size, np.float32)
         for word in ngram_word:
             try:
                 word_vector = self.get_vector_word(word=word, use_norm=use_norm_ngram_char, handle_oov=False)
                 if use_norm_word:
-                    word_vector = self._normalize_vector(word_vector)
+                    word_vector = self.normalize_vector(word_vector)
                 result += word_vector
                 words_found += 1
             except KeyError:
@@ -100,13 +112,6 @@ class Embedding:
             raise KeyError('all words are absent from model')
         else:
             return result / max(1, words_found)
-
-    @staticmethod
-    def _normalize_vector(arr):
-        arr_length = np.linalg.norm(arr)
-        if arr_length == 0.0:
-            return arr
-        return arr / arr_length
 
 
 class EmbeddingEpochCallback(CallbackAny2Vec):
