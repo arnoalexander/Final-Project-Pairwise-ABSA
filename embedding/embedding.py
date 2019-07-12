@@ -4,6 +4,7 @@ Represent word into dense vector
 
 from gensim.models import FastText
 from gensim.models.callbacks import CallbackAny2Vec
+from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import definition
 
@@ -79,11 +80,15 @@ class Embedding:
             return result / max(1, ngrams_found)
 
     @staticmethod
-    def normalize_vector(arr):
-        arr_length = np.linalg.norm(arr)
-        if arr_length == 0.0:
-            return arr
-        return arr / arr_length
+    def normalize_vector(vec):
+        vec_length = np.linalg.norm(vec)
+        if vec_length == 0.0:
+            return vec
+        return vec / vec_length
+
+    @staticmethod
+    def cosine_distance(vec1, vec2):
+        return cosine_similarity([vec1], [vec2])[0][0]
 
     @staticmethod
     def _get_ngram_word(sentence, n):

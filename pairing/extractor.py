@@ -86,12 +86,17 @@ class Extractor:
 
         # Semantic Feature
         for i in range(len(aspect_embedding)):
-            result['aspect_v_{}'.format(i)] = aspect_embedding[i]
+            result['v_aspect_{}'.format(i)] = aspect_embedding[i]
         for i in range(len(sentiment_embedding)):
-            result['sentiment_v_{}'.format(i)] = sentiment_embedding[i]
+            result['v_sentiment_{}'.format(i)] = sentiment_embedding[i]
         for i in range(len(sentence_embedding)):
-            result['sentence_v_{}'.format(i)] = sentence_embedding[i]
-        
+            result['v_sentence_{}'.format(i)] = sentence_embedding[i]
+
+        # Similarity Feature
+        result['cos_aspect_sentiment'] = self._extract_feature_cosine_distance(aspect_embedding, sentiment_embedding)
+        result['cos_aspect_sentence'] = self._extract_feature_cosine_distance(aspect_embedding, sentence_embedding)
+        result['cos_sentiment_sentence'] = self._extract_feature_cosine_distance(sentiment_embedding, sentence_embedding)
+
         return result
 
     @staticmethod
@@ -113,6 +118,10 @@ class Extractor:
         if self.embedding_model is None:
             return np.array([])
         return self.embedding_model.get_vector_sentence(sentence=tokens)
+
+    @staticmethod
+    def _extract_feature_cosine_distance(vector1, vector2):
+        return Embedding.cosine_distance(vector1, vector2)
 
 
 if __name__ == '__main__':
