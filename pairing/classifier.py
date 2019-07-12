@@ -18,7 +18,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
         self.model.fit(*args, **kwargs)
 
     def predict(self, *args, **kwargs):
-        self.model.predict(*args, **kwargs)
+        return self.model.predict(*args, **kwargs)
 
     def score(self, X, y, sample_weight=None):
         return self.f1_score(y, self.predict(X), sample_weight=sample_weight)
