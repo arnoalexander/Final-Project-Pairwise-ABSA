@@ -7,12 +7,21 @@ from sklearn.metrics import f1_score, confusion_matrix
 from lightgbm import LGBMClassifier
 import numpy as np
 import pandas as pd
+import pickle
 
 
 class Classifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, *args, **kwargs):
         self.model = LGBMClassifier(*args, **kwargs)
+
+    def save(self, path):
+        with open(path, 'wb') as outfile:
+            pickle.dump(self.model, outfile)
+
+    def load(self, path):
+        with open(path, 'rb') as infile:
+            self.model = pickle.load(infile)
 
     def fit(self, *args, **kwargs):
         self.model.fit(*args, **kwargs)

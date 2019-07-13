@@ -13,6 +13,7 @@ separated by tab.
 The result is document representation in dict/json format
 """
 
+import os
 import definition
 
 
@@ -95,4 +96,4 @@ class Reader:
 
 
 if __name__ == '__main__':
-    print(Reader.read_file(definition.DATA_PAIRED_SMALLSAMPLE)[0])
+    print(Reader.read_file(os.path.join(definition.DATA_LABELLED, 'sample-small.txt'))[0])

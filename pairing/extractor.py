@@ -6,6 +6,7 @@ Dict/json format follows Reader's output.
 The result is tabular data with defined features
 """
 
+import os
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -125,6 +126,6 @@ class Extractor:
 
 
 if __name__ == '__main__':
-    data = Reader.read_file(definition.DATA_PAIRED_SMALLSAMPLE)
+    data = Reader.read_file(os.path.join(definition.DATA_LABELLED, 'sample-small.txt'))
     extractor = Extractor()
     print(extractor.extract_data(data))
