@@ -20,16 +20,13 @@ import definition
 class Reader:
 
     """
-    Reader utility class
+    Reader utility class for pairing
     """
 
     # constants
     IDX_TOKEN = 0
     IDX_LABEL = 1
     IDX_PAIR = 2
-    STATE_O = 0
-    STATE_ASPECT = 1
-    STATE_SENTIMENT = 2
 
     @classmethod
     def read_file(cls, path, with_target=True):
