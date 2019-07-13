@@ -32,16 +32,16 @@ class Reader:
     STATE_SENTIMENT = 2
 
     @classmethod
-    def read_file(cls, path):
+    def read_file(cls, path, with_target=True):
         """
         Read a tsv file with predefined format
         """
         infile = open(path, mode='r')
         data = infile.read()
-        return cls.read_string(data)
+        return cls.read_string(data=data, with_target=with_target)
 
     @classmethod
-    def read_string(cls, data):
+    def read_string(cls, data, with_target=True):
         """
         Read a string with predefined format
         """
@@ -51,7 +51,7 @@ class Reader:
         for idx, line in enumerate(lines):
             if line == '':
                 if sentence is not None:
-                    results.append(cls._parse_sentence(sentence))
+                    results.append(cls._parse_sentence(sentence=sentence, with_target=with_target))
                     sentence = None
             else:
                 if sentence is None:
@@ -59,24 +59,25 @@ class Reader:
                 line = line.split('\t')
                 sentence.append(line)
                 if idx == len(lines) - 1:
-                    results.append(cls._parse_sentence(sentence))
+                    results.append(cls._parse_sentence(sentence=sentence, with_target=with_target))
                     sentence = None
 
         return results
 
     @classmethod
-    def _parse_sentence(cls, sentence):
+    def _parse_sentence(cls, sentence, with_target=True):
         result = {'token': [element[cls.IDX_TOKEN] for element in sentence],
-                  'label': [element[cls.IDX_LABEL] for element in sentence],
-                  'aspect': [{'start': index,
-                              'length': 1}
-                             for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
-                             if label == 'B-ASPECT'],
-                  'sentiment': [{'start': index,
-                                 'length': 1,
-                                 'index_aspect': []}
-                                for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
-                                if label == 'B-SENTIMENT']}
+                  'label': [element[cls.IDX_LABEL] for element in sentence]}
+
+        if not with_target:
+            return result
+
+        result['aspect'] = [{'start': index, 'length': 1}
+                            for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
+                            if label == 'B-ASPECT']
+        result['sentiment'] = [{'start': index, 'length': 1, 'index_aspect': []}
+                               for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
+                               if label == 'B-SENTIMENT']
 
         for index, element in enumerate(result['aspect']):
             index_token = element['start'] + 1
