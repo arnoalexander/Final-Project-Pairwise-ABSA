@@ -20,7 +20,7 @@ import definition
 class Reader:
 
     """
-    Reader utility class for pairing
+    Reader utility class for pairing task
     """
 
     # constants
@@ -64,17 +64,19 @@ class Reader:
     @classmethod
     def _parse_sentence(cls, sentence, with_target=True):
         result = {'token': [element[cls.IDX_TOKEN] for element in sentence],
-                  'label': [element[cls.IDX_LABEL] for element in sentence]}
+                  'label': [element[cls.IDX_LABEL] for element in sentence],
+                  'aspect': [{'start': index, 'length': 1}
+                             for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
+                             if label == 'B-ASPECT']}
 
-        if not with_target:
-            return result
-
-        result['aspect'] = [{'start': index, 'length': 1}
-                            for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
-                            if label == 'B-ASPECT']
-        result['sentiment'] = [{'start': index, 'length': 1, 'index_aspect': []}
-                               for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
-                               if label == 'B-SENTIMENT']
+        if with_target:
+            result['sentiment'] = [{'start': index, 'length': 1, 'index_aspect': []}
+                                   for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
+                                   if label == 'B-SENTIMENT']
+        else:
+            result['sentiment'] = [{'start': index, 'length': 1}
+                                   for index, label in enumerate([element[cls.IDX_LABEL] for element in sentence])
+                                   if label == 'B-SENTIMENT']
 
         for index, element in enumerate(result['aspect']):
             index_token = element['start'] + 1
@@ -86,7 +88,7 @@ class Reader:
             while index_token < len(sentence) and sentence[index_token][cls.IDX_LABEL] == 'I-SENTIMENT':
                 result['sentiment'][index]['length'] += 1
                 index_token += 1
-            if len(sentence[element['start']]) >= 3:
+            if len(sentence[element['start']]) >= 3 and with_target:
                 splitted_pair = sentence[element['start']][cls.IDX_PAIR].split(',')
                 result['sentiment'][index]['index_aspect'] = [int(index_aspect) - 1 for index_aspect in splitted_pair]
 

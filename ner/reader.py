@@ -17,7 +17,7 @@ import definition
 class Reader:
 
     """
-    Reader utility class for NER tagging
+    Reader utility class for NER tagging task
     """
 
     # constants
