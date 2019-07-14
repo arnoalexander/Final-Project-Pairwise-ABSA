@@ -12,14 +12,31 @@ import pickle
 
 class Classifier(BaseEstimator, ClassifierMixin):
 
-    def __init__(self, *args, **kwargs):
-        self.model = LGBMClassifier(*args, **kwargs)
+    def __init__(self, *args, model_base=None, model_filename=None, **kwargs):
+        """
+        Initialize object.
+        Set model_filename (path to saved base classifier model) OR model_base(initialized classifier model).
+        If both are specified, model_base is preferred. If none, new model will be generated based on args and kwargs.
+        """
+        if model_base is not None:
+            self.model = model_base
+        elif model_filename is not None:
+            with open(model_filename, 'rb') as infile:
+                self.model = pickle.load(infile)
+        else:
+            self.model = LGBMClassifier(*args, **kwargs)
 
     def save(self, path):
+        """
+        Save base model to a file
+        """
         with open(path, 'wb') as outfile:
             pickle.dump(self.model, outfile)
 
     def load(self, path):
+        """
+        Load base model from a file
+        """
         with open(path, 'rb') as infile:
             self.model = pickle.load(infile)
 

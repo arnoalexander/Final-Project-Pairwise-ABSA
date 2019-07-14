@@ -24,8 +24,8 @@ class Extractor:
     def __init__(self, embedding_filename=None, embedding_model=None):
         """
         Initialize object.
-        Set embedding_filename (path to saved base model of Embedding class) OR embedding model (initialized Embedding
-        object. If both are specified, embedding_model is preferred. If none, there won't be embedding feature
+        Set embedding_filename (path to saved base model of Embedding class) OR embedding_model (initialized Embedding
+        object. If both are specified, embedding_model is preferred. If none, there won't be embedding feature.
         """
         if embedding_model is not None:
             self.embedding_model = embedding_model
@@ -41,7 +41,7 @@ class Extractor:
         """
         result = []
         if progress_bar:
-            data = tqdm(data)
+            data = tqdm(data, desc="Extracting data")
         for sentence in data:
             result += self.extract_sentence(sentence=sentence, with_target=with_target)
         return pd.DataFrame(result)
