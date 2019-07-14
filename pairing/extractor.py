@@ -18,7 +18,7 @@ import definition
 class Extractor:
 
     """
-    Extractor class
+    Extractor class for pairing task
     """
 
     def __init__(self, embedding_filename=None, embedding_model=None):
@@ -35,7 +35,7 @@ class Extractor:
         else:
             self.embedding_model = None
 
-    def extract_data(self, data, progress_bar=True):
+    def extract_data(self, data, progress_bar=True, with_target=True):
         """
         dict/json list of sentences to tabular data
         """
@@ -43,10 +43,10 @@ class Extractor:
         if progress_bar:
             data = tqdm(data)
         for sentence in data:
-            result += self.extract_sentence(sentence)
+            result += self.extract_sentence(sentence=sentence, with_target=with_target)
         return pd.DataFrame(result)
 
-    def extract_sentence(self, sentence):
+    def extract_sentence(self, sentence, with_target=True):
         """
         dict/json of single sentences to tabular data
         """
@@ -54,7 +54,8 @@ class Extractor:
         for aspect_idx, aspect in enumerate(sentence['aspect']):
             for sentiment in sentence['sentiment']:
                 result_element = self._extract_features_aspect_sentiment(aspect, sentiment, sentence['token'])
-                result_element['target'] = self._extract_class_aspect_sentiment(aspect_idx, sentiment)
+                if with_target:
+                    result_element['target'] = self._extract_class_aspect_sentiment(aspect_idx, sentiment)
                 result.append(result_element)
         return result
 
@@ -94,9 +95,10 @@ class Extractor:
             result['v_sentence_{}'.format(i)] = sentence_embedding[i]
 
         # Similarity Feature
-        result['cos_aspect_sentiment'] = self._extract_feature_cosine_distance(aspect_embedding, sentiment_embedding)
-        result['cos_aspect_sentence'] = self._extract_feature_cosine_distance(aspect_embedding, sentence_embedding)
-        result['cos_sentiment_sentence'] = self._extract_feature_cosine_distance(sentiment_embedding, sentence_embedding)
+        if self.embedding_model is not None:
+            result['cos_aspect_sentiment'] = self._extract_feature_cosine_distance(aspect_embedding, sentiment_embedding)
+            result['cos_aspect_sentence'] = self._extract_feature_cosine_distance(aspect_embedding, sentence_embedding)
+            result['cos_sentiment_sentence'] = self._extract_feature_cosine_distance(sentiment_embedding, sentence_embedding)
 
         return result
 
