@@ -1,5 +1,9 @@
+# directories
 .idea/
 .ipynb_checkpoints/
 __pycache__/
 data/
 model/
+
+# files
+sandbox.ipynb
