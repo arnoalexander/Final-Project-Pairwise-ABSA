@@ -15,8 +15,18 @@ class Embedding:
     Wrapper class for gensim FastText
     """
 
-    def __init__(self, *args, **kwargs):
-        self.model = FastText(*args, **kwargs)
+    def __init__(self, *args, model_base=None, model_filename=None, **kwargs):
+        """
+        Initialize object.
+        Set model_filename (path to saved base embedding model) OR model_base(initialized embedding model).
+        If both are specified, model_base is preferred. If none, new model will be generated based on args and kwargs.
+        """
+        if model_base is not None:
+            self.model = model_base
+        elif model_filename is not None:
+            self.load(path=model_filename)
+        else:
+            self.model = FastText(*args, **kwargs)
 
     def save(self, path):
         self.model.save(path)
