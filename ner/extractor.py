@@ -11,6 +11,7 @@ import pickle
 from tqdm import tqdm
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
+from keras.utils import to_categorical
 from pairing import Reader
 from embedding import Embedding
 import definition
@@ -22,7 +23,8 @@ class Extractor:
     Extractor class for pairing task
     """
 
-    def __init__(self, embedding_filename=None, embedding_model=None, encoder_filename=None, encoder_model=None):
+    def __init__(self, embedding_filename=None, embedding_model=None, encoder_filename=None, encoder_model=None,
+                 possible_labels=None):
         """
         Initialize object.
         Set embedding_filename (path to saved base model of Embedding class) OR embedding_model (initialized Embedding
@@ -34,7 +36,7 @@ class Extractor:
             self.embedding_model = embedding_model
         elif embedding_filename is not None:
             self.embedding_model = Embedding()
-            self.embedding_model.load(embedding_filename)
+            self.embedding_model.load(path=embedding_filename)
         else:
             self.embedding_model = None
 
@@ -46,13 +48,31 @@ class Extractor:
         else:
             self.encoder_model = None
 
-    def set_encoder(self, encoder_model):
+        if possible_labels is not None:
+            self.possible_labels = possible_labels
+        else:
+            self.possible_labels = np.array(["O", "B-ASPECT", "I-ASPECT", "B-SENTIMENT", "I-SENTIMENT"])
+
+    def set_embedding_model(self, embedding_model):
+        """
+        Set embedding_model with initialized one
+        """
+        self.embedding_model = embedding_model
+
+    def load_embedding_model(self, path):
+        """
+        Load embedding_model from a file
+        """
+        self.embedding_model = Embedding()
+        self.embedding_model.load(path=path)
+
+    def set_encoder_model(self, encoder_model):
         """
         Set encoder_model with initialized one
         """
         self.encoder_model = encoder_model
 
-    def save_encoder(self, path):
+    def save_encoder_model(self, path):
         """
         Save encoder to a file
         """
@@ -60,12 +80,15 @@ class Extractor:
             with open(path, 'wb') as outfile:
                 pickle.dump(self.encoder_model, outfile)
 
-    def load_encoder(self, path):
+    def load_encoder_model(self, path):
         """
         Load encoder from a file
         """
         with open(path, 'rb') as infile:
             self.encoder_model = pickle.load(infile)
+
+    def set_possible_labels(self, possible_labels):
+        self.possible_labels = possible_labels
 
     def fit_data(self, data, progress_bar=True, thresh_count=None):
         """
@@ -74,13 +97,21 @@ class Extractor:
         description, _ = self._extract_data_to_json(data=data, progress_bar=progress_bar, with_target=False)
         self._fit_encoder(description=description, thresh_count=thresh_count)
 
-    def extract_data(self, data, progress_bar=True, with_target=True, format_json=False, thresh_count=None):
+    def extract_data(self, data, progress_bar=True, with_target=True, is_x_matrix=True, is_y_matrix=True,
+                     thresh_count=None):
         """
-        dict/json list of sentences to tabular data
+        dict/json list of sentences to features
         """
-        description, target = self._extract_data_to_json(data=data, progress_bar=progress_bar, with_target=with_target)
-        if not format_json:
-            description = self._extract_json_to_tabular(description=description, thresh_count=thresh_count)
+        if with_target:
+            description, target = self._extract_data_to_json(data=data, progress_bar=progress_bar, with_target=with_target)
+        else:
+            description = self._extract_data_to_json(data=data, progress_bar=progress_bar, with_target=with_target)
+
+        if is_x_matrix:
+            description = self.convert_x_json_to_matrix(description=description, thresh_count=thresh_count)
+        if is_y_matrix and with_target:
+            target = self.convert_y_label_to_matrix(target=target)
+
         if with_target:
             return description, target
         return description
@@ -94,26 +125,13 @@ class Extractor:
             description.append(self._extract_features_token(tokens=sentence['token'], idx_token=idx_token))
 
         if with_target:
-            return description, sentence['label']
-        return description
+            return np.array(description), np.array(sentence['label'])
+        return np.array(description)
 
-    def _extract_data_to_json(self, data, progress_bar=True, with_target=True):
-        description = []
-        target = []
-
-        if progress_bar:
-            data = tqdm(data, desc="Extracting data")
-        for sentence in data:
-            sentence_extract = self.extract_sentence(sentence=sentence, with_target=with_target)
-            if not with_target:
-                description.append(sentence_extract)
-            else:
-                description.append(sentence_extract[0])
-                target.append(sentence_extract[1])
-
-        return description, target
-
-    def _extract_json_to_tabular(self, description, thresh_count=None):
+    def convert_x_json_to_matrix(self, description, thresh_count=None):
+        """
+        Convert extracted data in json format to matrix form (ready to be fitted to nn model)
+        """
         if self.encoder_model is None:
             print("Encoding model not found. It will be generated.")
             self._fit_encoder(description=description, thresh_count=thresh_count)
@@ -132,6 +150,42 @@ class Extractor:
             values.append(values_sentence)
 
         return np.array(values)
+
+    def convert_y_label_to_matrix(self, target, possible_labels=None):
+        """
+        Convert extracted label to matrix form (ready to be fitted to nn model)
+        """
+        if possible_labels is None:
+            possible_labels = self.possible_labels
+        label2idx = {label: idx for idx, label in enumerate(possible_labels)}
+        target_label_encoding = [[label2idx[target_token] for target_token in target_sentence] for target_sentence in target]
+        return np.array([to_categorical(target_sentence, len(possible_labels)) for target_sentence in target_label_encoding])
+
+    def convert_y_matrix_to_label(self, target, possible_labels=None):
+        """
+        Convert matrix one-hot label to string label form
+        """
+        if possible_labels is None:
+            possible_labels = self.possible_labels
+        return np.array([np.array([possible_labels[np.argmax(target_token)] for target_token in target_sentence])
+                         for target_sentence in target])
+
+    def _extract_data_to_json(self, data, progress_bar=True, with_target=True):
+        description = []
+        target = []
+
+        if progress_bar:
+            data = tqdm(data, desc="Extracting data")
+        for sentence in data:
+            sentence_extract = self.extract_sentence(sentence=sentence, with_target=with_target)
+            if not with_target:
+                description.append(sentence_extract)
+            else:
+                description.append(sentence_extract[0])
+                target.append(sentence_extract[1])
+        if with_target:
+            return np.array(description), np.array(target)
+        return np.array(description)
 
     def _fit_encoder(self, description, thresh_count=None):
         keys_numerical = []
