@@ -5,7 +5,6 @@ Architectures for sequence tagging task
 from keras_contrib.layers import CRF
 from keras_contrib.losses import crf_loss
 from keras_contrib.metrics import crf_accuracy
-from keras_contrib.utils import save_load_utils
 from keras.models import Model, load_model
 from keras.layers import Input, Bidirectional, LSTM, TimeDistributed, Dense
 from keras.utils import Sequence
