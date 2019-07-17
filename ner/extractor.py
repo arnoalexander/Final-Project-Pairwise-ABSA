@@ -95,7 +95,7 @@ class Extractor:
         Fit data to encoder
         """
         description, _ = self._extract_data_to_json(data=data, progress_bar=progress_bar, with_target=False)
-        self._fit_encoder(description=description, thresh_count=thresh_count)
+        self._fit_encoder(description=description, progress_bar=progress_bar, thresh_count=thresh_count)
 
     def extract_data(self, data, progress_bar=True, with_target=True, is_x_matrix=True, is_y_matrix=True,
                      thresh_count=None):
@@ -108,7 +108,7 @@ class Extractor:
             description = self._extract_data_to_json(data=data, progress_bar=progress_bar, with_target=with_target)
 
         if is_x_matrix:
-            description = self.convert_x_json_to_matrix(description=description, thresh_count=thresh_count)
+            description = self.convert_x_json_to_matrix(description=description, progress_bar=progress_bar, thresh_count=thresh_count)
         if is_y_matrix and with_target:
             target = self.convert_y_label_to_matrix(target=target)
 
@@ -128,13 +128,13 @@ class Extractor:
             return np.array(description), np.array(sentence['label'])
         return np.array(description)
 
-    def convert_x_json_to_matrix(self, description, thresh_count=None):
+    def convert_x_json_to_matrix(self, description, progress_bar=True, thresh_count=None):
         """
         Convert extracted data in json format to matrix form (ready to be fitted to nn model)
         """
         if self.encoder_model is None:
             print("Encoding model not found. It will be generated.")
-            self._fit_encoder(description=description, thresh_count=thresh_count)
+            self._fit_encoder(description=description, progress_bar=progress_bar, thresh_count=thresh_count)
 
         values = []
         for sentence in description:
@@ -187,7 +187,7 @@ class Extractor:
             return np.array(description), np.array(target)
         return np.array(description)
 
-    def _fit_encoder(self, description, thresh_count=None):
+    def _fit_encoder(self, description, progress_bar=True, thresh_count=None):
         keys_numerical = []
         keys_categorical = []
         keys = [keyvalue[0] for keyvalue in sorted(description[0][0].items())]
@@ -198,6 +198,8 @@ class Extractor:
                 keys_numerical.append(key)
 
         values_categorical = []
+        if progress_bar:
+            description = tqdm(description, desc="Fitting sentence to encoder")
         for sentence in description:
             for token in sentence:
                 values_categorical.append([token[key] for key in keys_categorical])
