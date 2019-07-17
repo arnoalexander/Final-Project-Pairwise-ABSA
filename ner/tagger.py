@@ -5,7 +5,8 @@ Architectures for sequence tagging task
 from keras_contrib.layers import CRF
 from keras_contrib.losses import crf_loss
 from keras_contrib.metrics import crf_accuracy
-from keras.models import Sequential, Model
+from keras_contrib.utils import save_load_utils
+from keras.models import Model, load_model
 from keras.layers import Input, Bidirectional, LSTM, TimeDistributed, Dense
 from keras.utils import Sequence
 import numpy as np
@@ -35,6 +36,31 @@ class BaseTagger:
     def predict_generator(self, *args, **kwargs):
         return self.model.predict_generator(*args, **kwargs)
 
+    def save(self, filepath):
+        self.model.save(filepath=filepath, include_optimizer=False)
+
+    def load(self, filepath):
+        self.model = load_model(filepath=filepath, custom_objects=self.create_custom_objects())
+
+    @classmethod
+    def create_custom_objects(cls):
+        instance_holder = {"instance": None}
+
+        class ClassWrapper(CRF):
+            def __init__(self, *args, **kwargs):
+                instance_holder["instance"] = self
+                super(ClassWrapper, self).__init__(*args, **kwargs)
+
+        def loss(*args):
+            method = getattr(instance_holder["instance"], "loss_function")
+            return method(*args)
+
+        def accuracy(*args):
+            method = getattr(instance_holder["instance"], "accuracy")
+            return method(*args)
+
+        return {"ClassWrapper": ClassWrapper, "CRF": ClassWrapper, "loss": loss, "accuracy": accuracy}
+
 
 class BiLstmCrfTagger(BaseTagger):
 
@@ -43,15 +69,11 @@ class BiLstmCrfTagger(BaseTagger):
     """
 
     def __init__(self, n_features, n_lstm_unit, n_distributed_dense, n_tags):
-        input = Input(shape=(None, n_features))
-        output = Bidirectional(LSTM(units=n_lstm_unit, return_sequences=True))(input)
-        output = TimeDistributed(Dense(n_distributed_dense))(output)
-        output = CRF(n_tags)(output)
-        self.model = Model(inputs=input, outputs=output)
-        # self.model = Sequential()
-        # self.model.add(Bidirectional(LSTM(input_shape=(None, n_features), units=n_lstm_unit, return_sequences=True)))
-        # self.model.add(TimeDistributed(Dense(n_distributed_dense)))
-        # self.model.add(CRF(n_tags))
+        inputs = Input(shape=(None, n_features))
+        outputs = Bidirectional(LSTM(units=n_lstm_unit, return_sequences=True))(inputs)
+        outputs = TimeDistributed(Dense(n_distributed_dense))(outputs)
+        outputs = CRF(n_tags)(outputs)
+        self.model = Model(inputs=inputs, outputs=outputs)
         self.model.compile(optimizer="rmsprop", loss=crf_loss, metrics=[crf_accuracy])
         super().__init__(self.model)
 
