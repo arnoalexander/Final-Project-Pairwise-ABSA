@@ -159,7 +159,7 @@ class Extractor:
             possible_labels = self.possible_labels
         label2idx = {label: idx for idx, label in enumerate(possible_labels)}
         target_label_encoding = [[label2idx[target_token] for target_token in target_sentence] for target_sentence in target]
-        return np.array([to_categorical(target_sentence, len(possible_labels)) for target_sentence in target_label_encoding])
+        return np.array([to_categorical(target_sentence, len(possible_labels)).tolist() for target_sentence in target_label_encoding])
 
     def convert_y_matrix_to_label(self, target, possible_labels=None):
         """
@@ -167,7 +167,7 @@ class Extractor:
         """
         if possible_labels is None:
             possible_labels = self.possible_labels
-        return np.array([np.array([possible_labels[np.argmax(target_token)] for target_token in target_sentence])
+        return np.array([[possible_labels[np.argmax(target_token)] for target_token in target_sentence]
                          for target_sentence in target])
 
     def _extract_data_to_json(self, data, progress_bar=True, with_target=True):
