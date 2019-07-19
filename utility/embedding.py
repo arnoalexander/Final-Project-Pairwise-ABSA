@@ -18,7 +18,7 @@ class Embedding:
     def __init__(self, *args, model_base=None, model_filename=None, **kwargs):
         """
         Initialize object.
-        Set model_filename (path to saved base embedding model) OR model_base(initialized embedding model).
+        Set model_filename (path to saved base utility model) OR model_base(initialized utility model).
         If both are specified, model_base is preferred. If none, new model will be generated based on args and kwargs.
         """
         if model_base is not None:

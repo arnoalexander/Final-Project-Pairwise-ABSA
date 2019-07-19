@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from pairing import Reader
-from embedding import Embedding
+from utility import Embedding
 import definition
 
 

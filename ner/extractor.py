@@ -13,7 +13,7 @@ import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 from keras.utils import to_categorical
 from pairing import Reader
-from embedding import Embedding
+from utility import Embedding
 import definition
 
 
