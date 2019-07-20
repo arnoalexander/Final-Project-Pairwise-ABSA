@@ -146,7 +146,7 @@ class Extractor:
             values_numerical_sentence = np.vstack(values_numerical_sentence)
             values_categorical_sentence = np.vstack(values_categorical_sentence)
             values_categorical_sentence = self.encoder_model['one_hot_encoder'].transform(values_categorical_sentence).toarray()
-            values_sentence = np.hstack((values_numerical_sentence, values_categorical_sentence))
+            values_sentence = np.hstack((values_numerical_sentence, values_categorical_sentence))  # mind the order
             values.append(values_sentence)
 
         return np.array(values)

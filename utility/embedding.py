@@ -29,15 +29,27 @@ class Embedding:
             self.model = FastText(*args, **kwargs)
 
     def save(self, path):
+        """
+        Save model to path
+        """
         self.model.save(path)
 
     def load(self, path):
+        """
+        Load model from path
+        """
         self.model = FastText.load(path)
 
     def build_vocab(self, *args, **kwargs):
+        """
+        Gensim build_vocab wrapper
+        """
         self.model.build_vocab(*args, **kwargs)
 
     def train(self, *args, total_examples=None, epochs=None, verbose=False, **kwargs):
+        """
+        Gensim train wrapper
+        """
         if total_examples is None:
             total_examples = self.model.corpus_count
         if epochs is None:
