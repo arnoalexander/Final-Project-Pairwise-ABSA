@@ -15,8 +15,6 @@ DATA_RAW_FILE = os.path.join(DATA_RAW, 'ceres_review_until_20181201.csv')
 
 MODEL = os.path.join(ROOT, 'model')
 MODEL_UTILITY = os.path.join(MODEL, 'utility')
-MODEL_EMBEDDING_FASTTEXT = os.path.join(MODEL_UTILITY, 'fasttext.bin')
-MODEL_EMBEDDING_SAMPLEFASTTEXT = os.path.join(MODEL_UTILITY, 'fasttext_sample.bin')
 MODEL_NER = os.path.join(MODEL, 'ner')
 MODEL_ENCODING_FILE = os.path.join(MODEL_NER, 'encoding.pkl')
 MODEL_ENCODING_SAMPLEFILE = os.path.join(MODEL_NER, 'encoding_sample.pkl')
