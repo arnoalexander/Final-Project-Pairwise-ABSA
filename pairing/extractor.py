@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from pairing import Reader
-from utility import Embedding
+from utility import Embedding, WordCount
 import definition
 
 
@@ -21,19 +21,53 @@ class Extractor:
     Extractor class for pairing task
     """
 
-    def __init__(self, embedding_filename=None, embedding_model=None):
+    def __init__(self, embedding_filename=None, embedding_model=None, word_count_filename=None, word_count_model=None):
         """
         Initialize object.
-        Set embedding_filename (path to saved base model of Embedding class) OR embedding_model (initialized Embedding
-        object. If both are specified, embedding_model is preferred. If none, there won't be embedding feature.
+        Set filename (path to saved model) OR model (initialized model). If both are specified, model is preferred.
+        If none, there won't be feature related to model.
         """
         if embedding_model is not None:
             self.embedding_model = embedding_model
         elif embedding_filename is not None:
             self.embedding_model = Embedding()
-            self.embedding_model.load(embedding_filename)
+            self.embedding_model.load(path=embedding_filename)
         else:
             self.embedding_model = None
+
+        if word_count_model is not None:
+            self.word_count_model = word_count_model
+        elif word_count_filename is not None:
+            self.word_count_model = WordCount()
+            self.word_count_model.load(path=word_count_filename)
+        else:
+            self.word_count_model = None
+
+    def set_embedding_model(self, embedding_model):
+        """
+        Set embedding model with initialized Embedding object
+        """
+        self.embedding_model = embedding_model
+
+    def load_embedding_model(self, path):
+        """
+        Load embedding model from a file (using Embedding load method)
+        """
+        self.embedding_model = Embedding()
+        self.embedding_model.load(path=path)
+
+    def set_word_count_model(self, word_count_model):
+        """
+        Set word count model with initialized WordCount object
+        """
+        self.word_count_model = word_count_model
+
+    def load_word_count_model(self, path):
+        """
+        Load word count model from a file (using WordCount load method)
+        """
+        self.word_count_model = WordCount()
+        self.word_count_model.load(path=path)
 
     def extract_data(self, data, progress_bar=True, with_target=True):
         """
@@ -66,7 +100,8 @@ class Extractor:
     def _extract_features_aspect_sentiment(self, aspect, sentiment, tokens):
         result = dict()
 
-        # Intermediate Values
+        # Intermediate Variables
+        dictionary_tf = self._extract_feature_dict_tf(tokens)
         aspect_embedding = self._extract_feature_vector_sequence(aspect['start'], aspect['length'], tokens)
         sentiment_embedding = self._extract_feature_vector_sequence(sentiment['start'], sentiment['length'], tokens)
         sentence_embedding = self._extract_feature_vector_sentence(tokens)
@@ -75,8 +110,12 @@ class Extractor:
         # result['aspect'] = tokens[aspect['start']]
         # result['sentiment'] = tokens[sentiment['start']]
 
-        # TODO add more feature
         # Statistics Feature
+        if self.word_count_model is not None:
+            result['idf_aspect'] = self._extract_feature_idf(aspect['start'], aspect['length'], tokens)
+            result['idf_sentiment'] = self._extract_feature_idf(sentiment['start'], sentiment['length'], tokens)
+        result['tf_aspect'] = self._extract_feature_tf(dictionary_tf, aspect['start'], aspect['length'], tokens)
+        result['tf_sentiment'] = self._extract_feature_tf(dictionary_tf, sentiment['start'], sentiment['length'], tokens)
         result['len_aspect_word'] = aspect['length']
         result['len_sentiment_word'] = sentiment['length']
         result['len_aspect_char'] = self._extract_feature_numchar_sequence(aspect['start'], aspect['length'], tokens)
@@ -123,6 +162,25 @@ class Extractor:
         return self.embedding_model.get_vector_sentence(sentence=tokens)
 
     @staticmethod
+    def _extract_feature_dict_tf(tokens):
+        return WordCount.calculate_tf_dict(sentence=tokens)
+
+    @staticmethod
+    def _extract_feature_tf(dict_tf, start, length, tokens):
+        sum_tf = 0
+        for index in range(start, start + length):
+            sum_tf += dict_tf.get(tokens[index], 0)
+        return sum_tf / length
+
+    def _extract_feature_idf(self, start, length, tokens):
+        if self.word_count_model is None:
+            return 0
+        sum_idf = 0
+        for index in range(start, start + length):
+            sum_idf += self.word_count_model.get_idf(tokens[index])
+        return sum_idf / length
+
+    @staticmethod
     def _extract_feature_cosine_distance(vector1, vector2):
         return Embedding.cosine_distance(vector1, vector2)
 
@@ -130,4 +188,8 @@ class Extractor:
 if __name__ == '__main__':
     data = Reader.read_file(os.path.join(definition.DATA_LABELLED, 'sample-small.txt'))
     extractor = Extractor()
-    print(extractor.extract_data(data))
+    extractor.load_embedding_model(os.path.join(definition.MODEL_UTILITY, 'fasttext_25.bin'))
+    extractor.load_word_count_model(os.path.join(definition.MODEL_UTILITY, 'word_count_60.pkl'))
+    extracted = extractor.extract_data(data)
+    print(extracted.values.shape)
+    print(extracted)
