@@ -69,18 +69,27 @@ class Extractor:
         self.word_count_model = WordCount()
         self.word_count_model.load(path=path)
 
-    def extract_data(self, data, progress_bar=True, with_target=True):
+    def extract_data(self, data, additional_feature=None, progress_bar=True, with_target=True, as_dataframe=True):
         """
         dict/json list of sentences to tabular data
         """
         result = []
         if progress_bar:
             data = tqdm(data, desc="Extracting data")
-        for sentence in data:
-            result += self.extract_sentence(sentence=sentence, with_target=with_target)
-        return pd.DataFrame(result)
+        for idx, sentence in enumerate(data):
+            additional_feature_sentence = {'id_sentence': idx}
+            if additional_feature is not None:
+                additional_feature_sentence.update(additional_feature)
+            result += self.extract_sentence(sentence=sentence,
+                                            additional_feature=additional_feature_sentence,
+                                            with_target=with_target,
+                                            as_dataframe=False)
 
-    def extract_sentence(self, sentence, with_target=True):
+        if as_dataframe:
+            return pd.DataFrame(result)
+        return result
+
+    def extract_sentence(self, sentence, additional_feature=None, with_target=True, as_dataframe=True):
         """
         dict/json of single sentences to tabular data
         """
@@ -88,9 +97,14 @@ class Extractor:
         for aspect_idx, aspect in enumerate(sentence['aspect']):
             for sentiment in sentence['sentiment']:
                 result_element = self._extract_features_aspect_sentiment(aspect, sentiment, sentence['token'])
+                if additional_feature is not None:
+                    result_element.update(additional_feature)
                 if with_target:
                     result_element['target'] = self._extract_class_aspect_sentiment(aspect_idx, sentiment)
                 result.append(result_element)
+
+        if as_dataframe:
+            return pd.DataFrame(result)
         return result
 
     @staticmethod
