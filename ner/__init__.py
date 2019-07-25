@@ -1,3 +1,3 @@
 from .reader import Reader
 from .extractor import Extractor
-from .tagger import UnaryBatchGenerator, BiLstmCrfTagger
+from .tagger import SingularBatchGenerator, BiLstmCrfTagger

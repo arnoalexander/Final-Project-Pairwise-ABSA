@@ -77,7 +77,7 @@ class BiLstmCrfTagger(BaseTagger):
         super().__init__(self.model)
 
 
-class UnaryBatchGenerator(Sequence):
+class SingularBatchGenerator(Sequence):
 
     """
     Generate batch with size=1 for training
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     model = BiLstmCrfTagger(3, 50, 20, 2)
     sample_data = np.array([[[1.0, 2.0, 0.0], [0.5, 1.2, 0.2]], [[1.0, 2.0, 0.1]]])
     sample_label = np.array([[[1.0, 0.0], [1.0, 0.0]], [[0.0, 1.0]]])
-    generator = UnaryBatchGenerator(sample_data, sample_label)
+    generator = SingularBatchGenerator(sample_data, sample_label)
     model.fit_generator(generator, epochs=5, verbose=2)
     pred = []
     for item in sample_data:

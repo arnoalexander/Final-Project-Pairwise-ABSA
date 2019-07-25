@@ -92,7 +92,7 @@ class Extractor:
 
     def fit_data(self, data, progress_bar=True, thresh_count=None):
         """
-        Fit data to encoder
+        Fit data to encoder. thresh_count is minimum occurrence of categorical values.
         """
         description, _ = self._extract_data_to_json(data=data, progress_bar=progress_bar, with_target=False)
         self._fit_encoder(description=description, progress_bar=progress_bar, thresh_count=thresh_count)
@@ -100,7 +100,7 @@ class Extractor:
     def extract_data(self, data, progress_bar=True, with_target=True, is_x_matrix=True, is_y_matrix=True,
                      thresh_count=None):
         """
-        dict/json list of sentences to features
+        dict/json list of sentences to features. thresh_count will be ignored if encoder is already fitted/loaded
         """
         if with_target:
             description, target = self._extract_data_to_json(data=data, progress_bar=progress_bar, with_target=with_target)
@@ -145,7 +145,8 @@ class Extractor:
                 values_categorical_sentence.append([token[key] for key in self.encoder_model['keys_categorical']])
             values_numerical_sentence = np.vstack(values_numerical_sentence)
             values_categorical_sentence = np.vstack(values_categorical_sentence)
-            values_categorical_sentence = self.encoder_model['one_hot_encoder'].transform(values_categorical_sentence).toarray()
+            if len(self.encoder_model['keys_categorical']) > 0:
+                values_categorical_sentence = self.encoder_model['one_hot_encoder'].transform(values_categorical_sentence).toarray()
             values_sentence = np.hstack((values_numerical_sentence, values_categorical_sentence))  # mind the order
             values.append(values_sentence)
 
@@ -198,20 +199,23 @@ class Extractor:
                 keys_numerical.append(key)
 
         values_categorical = []
-        if progress_bar:
-            description = tqdm(description, desc="Fitting sentence to encoder")
-        for sentence in description:
-            for token in sentence:
-                values_categorical.append([token[key] for key in keys_categorical])
-        values_categorical = np.vstack(values_categorical)
-        if thresh_count is None:
-            one_hot_encoder = OneHotEncoder(handle_unknown='ignore')
+        if len(keys_categorical) > 0:
+            if progress_bar:
+                description = tqdm(description, desc="Fitting sentence to encoder (categorical)")
+            for sentence in description:
+                for token in sentence:
+                    values_categorical.append([token[key] for key in keys_categorical])
+            values_categorical = np.vstack(values_categorical)
+            if thresh_count is None:
+                one_hot_encoder = OneHotEncoder(handle_unknown='ignore')
+            else:
+                unique_count = [np.unique([element[i] for element in values_categorical], return_counts=True)
+                                for i in range(np.array(values_categorical).shape[1])]
+                constrained_unique_count = [element[0][element[1] >= thresh_count] for element in unique_count]
+                one_hot_encoder = OneHotEncoder(categories=constrained_unique_count, handle_unknown='ignore')
+            one_hot_encoder.fit(values_categorical)
         else:
-            unique_count = [np.unique([element[i] for element in values_categorical], return_counts=True)
-                            for i in range(np.array(values_categorical).shape[1])]
-            constrained_unique_count = [element[0][element[1] >= thresh_count] for element in unique_count]
-            one_hot_encoder = OneHotEncoder(categories=constrained_unique_count, handle_unknown='ignore')
-        one_hot_encoder.fit(values_categorical)
+            one_hot_encoder = OneHotEncoder(handle_unknown='ignore')
 
         self.encoder_model = {'keys_numerical': keys_numerical,
                               'keys_categorical': keys_categorical,
@@ -220,8 +224,34 @@ class Extractor:
     def _extract_features_token(self, tokens, idx_token):
         # TODO implement more feature
         result = dict()
-        result['token'] = tokens[idx_token]
-        result['position'] = idx_token
+
+        # dummy feature
+        # result['token'] = tokens[idx_token]
+        # result['position'] = idx_token
+
+        # window center
+        emb_vector = self.embedding_model.get_vector_word(tokens[idx_token])
+        for i in range(len(emb_vector)):
+            result['v_{}'.format(i)] = emb_vector[i]
+
+        # window [+1]
+        if idx_token < len(tokens) - 1:
+            emb_vector = self.embedding_model.get_vector_word(tokens[idx_token+1])
+            for i in range(len(emb_vector)):
+                result['[+1]v_{}'.format(i)] = emb_vector[i]
+        else:
+            for i in range(len(emb_vector)):
+                result['[+1]v_{}'.format(i)] = 0.0
+
+        # window [-1]
+        if idx_token > 0:
+            emb_vector = self.embedding_model.get_vector_word(tokens[idx_token-1])
+            for i in range(len(emb_vector)):
+                result['[-1]v_{}'.format(i)] = emb_vector[i]
+        else:
+            for i in range(len(emb_vector)):
+                result['[-1]v_{}'.format(i)] = 0.0
+
         return result
 
 
