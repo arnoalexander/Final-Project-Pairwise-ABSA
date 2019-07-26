@@ -169,7 +169,7 @@ class Extractor:
         if self.embedding_model is not None:
             if np.isnan(min_distance_aspect_sentiment):
                 result['cos_aspect_sentiment_validity'] = 0
-                result['cos_aspect_sentiment'] = -1
+                result['cos_aspect_sentiment'] = Embedding.DEFAULT_COS_DISTANCE
             else:
                 result['cos_aspect_sentiment_validity'] = 1
                 result['cos_aspect_sentiment'] = min_distance_aspect_sentiment

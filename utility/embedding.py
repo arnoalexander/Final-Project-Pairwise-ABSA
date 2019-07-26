@@ -15,6 +15,9 @@ class Embedding:
     Wrapper class for gensim FastText
     """
 
+    # Constants
+    DEFAULT_COS_DISTANCE = 0
+
     def __init__(self, *args, model_base=None, model_filename=None, **kwargs):
         """
         Initialize object.
