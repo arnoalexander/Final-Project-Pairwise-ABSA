@@ -10,7 +10,7 @@ import pandas as pd
 import pickle
 
 
-class Classifier(BaseEstimator, ClassifierMixin):
+class GBClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, *args, model_base=None, model_filename=None, **kwargs):
         """
@@ -40,11 +40,11 @@ class Classifier(BaseEstimator, ClassifierMixin):
         with open(path, 'rb') as infile:
             self.model = pickle.load(infile)
 
-    def fit(self, *args, **kwargs):
-        self.model.fit(*args, **kwargs)
+    def fit(self, X, y, *args, **kwargs):
+        self.model.fit(X, y, *args, **kwargs)
 
-    def predict(self, *args, **kwargs):
-        return self.model.predict(*args, **kwargs)
+    def predict(self, X, *args, **kwargs):
+        return self.model.predict(X, *args, **kwargs)
 
     def score(self, X, y, sample_weight=None):
         return self.f1_score(y, self.predict(X), sample_weight=sample_weight)
@@ -68,4 +68,4 @@ class Classifier(BaseEstimator, ClassifierMixin):
 
 
 if __name__ == '__main__':
-    print(Classifier.generate_confusion_matrix_table([0, 0, 0], [0, 1, 1]))
+    print(GBClassifier.generate_confusion_matrix_table([0, 0, 0], [0, 1, 1]))
