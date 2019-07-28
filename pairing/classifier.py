@@ -67,5 +67,42 @@ class GBClassifier(BaseEstimator, ClassifierMixin):
                             columns=["predicted_{}".format(label) for label in labels])
 
 
+class FilteredGBClassifier(GBClassifier):
+
+    def __init__(self, *args, model_base=None, model_filename=None, **kwargs):
+        """
+        Initialize object.
+        Set model_filename (path to saved base classifier model) OR model_base(initialized classifier model).
+        If both are specified, model_base is preferred. If none, new model will be generated based on args and kwargs.
+        """
+        super().__init__(*args, model_base=model_base, model_filename=model_filename, **kwargs)
+
+    def fit(self, *args, X, y, **kwargs):
+        """
+        Fit data X with label y. X is dataframe with mandatory column : _n_sentiment
+        """
+        train_criteria = self._get_train_criteria(X)
+        X_train = X[train_criteria]
+        y_train = y[train_criteria]
+        if len(y_train) > 0:
+            self.model.fit(X_train, y_train, *args, **kwargs)
+
+    def predict(self, X, *args, **kwargs):
+        """
+        Predict label for X. X is dataframe with mandatory column : _n_sentiment
+        """
+        train_criteria = self._get_train_criteria(X)
+        X_pass = X[np.bitwise_not(train_criteria)]
+        X_train = X[train_criteria]
+        pred_pass = pd.Series(data=np.zeros(shape=len(X_pass), dtype=int), index=X_pass.index)
+        pred_train = pd.Series(data=self.model.predict(X_train, *args, **kwargs), index=X_train.index)
+        pred = pd.concat((pred_pass, pred_train)).sort_index().as_matrix()
+        return pred
+
+    @staticmethod
+    def _get_train_criteria(X):
+        return X['_n_sentiment'] > 1
+
+
 if __name__ == '__main__':
     print(GBClassifier.generate_confusion_matrix_table([0, 0, 0], [0, 1, 1]))

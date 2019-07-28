@@ -77,7 +77,9 @@ class Extractor:
         if progress_bar:
             data = tqdm(data, desc="Extracting data")
         for idx, sentence in enumerate(data):
-            additional_feature_sentence = {'id_sentence': idx}
+            additional_feature_sentence = {'_id_sentence': idx,
+                                           '_n_aspect': len(sentence['aspect']),
+                                           '_n_sentiment': len(sentence['sentiment'])}
             if additional_feature is not None:
                 additional_feature_sentence.update(additional_feature)
             result += self.extract_sentence(sentence=sentence,
