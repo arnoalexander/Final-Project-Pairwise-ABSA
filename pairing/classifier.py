@@ -77,12 +77,12 @@ class FilteredGBClassifier(GBClassifier):
         """
         super().__init__(*args, model_base=model_base, model_filename=model_filename, **kwargs)
 
-    def fit(self, *args, X, y, **kwargs):
+    def fit(self, X, y, *args, **kwargs):
         """
         Fit data X with label y. X is dataframe with mandatory column : _n_sentiment
         """
         train_criteria = self._get_train_criteria(X)
-        X_train = X[train_criteria]
+        X_train = X[train_criteria].drop(labels=['_n_sentiment'], axis=1)
         y_train = y[train_criteria]
         if len(y_train) > 0:
             self.model.fit(X_train, y_train, *args, **kwargs)
@@ -93,8 +93,8 @@ class FilteredGBClassifier(GBClassifier):
         """
         train_criteria = self._get_train_criteria(X)
         X_pass = X[np.bitwise_not(train_criteria)]
-        X_train = X[train_criteria]
-        pred_pass = pd.Series(data=np.zeros(shape=len(X_pass), dtype=int), index=X_pass.index)
+        X_train = X[train_criteria].drop(labels=['_n_sentiment'], axis=1)
+        pred_pass = pd.Series(data=np.repeat(a=1, repeats=len(X_pass)), index=X_pass.index)
         pred_train = pd.Series(data=self.model.predict(X_train, *args, **kwargs), index=X_train.index)
         pred = pd.concat((pred_pass, pred_train)).sort_index().as_matrix()
         return pred
