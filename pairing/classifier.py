@@ -21,8 +21,7 @@ class GBClassifier(BaseEstimator, ClassifierMixin):
         if model_base is not None:
             self.model = model_base
         elif model_filename is not None:
-            with open(model_filename, 'rb') as infile:
-                self.model = pickle.load(infile)
+            self.load(path=model_filename)
         else:
             self.model = LGBMClassifier(*args, **kwargs)
 
