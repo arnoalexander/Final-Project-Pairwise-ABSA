@@ -58,7 +58,7 @@ class WordCount:
         """
         Get idf of token based on training data
         """
-        return self.idf_dict.get(token, np.log(self.len_data))
+        return self.idf_dict.get(token, 0.0)
 
     @staticmethod
     def calculate_count_dict(data, progress_bar=False):
