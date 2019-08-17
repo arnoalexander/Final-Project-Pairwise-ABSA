@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from pairing import Reader
-from utility import Embedding, WordCount
+from utility import Embedding, WordCount, Clusterer
 import definition
 
 
@@ -21,7 +21,8 @@ class Extractor:
     Extractor class for pairing task
     """
 
-    def __init__(self, embedding_filename=None, embedding_model=None, word_count_filename=None, word_count_model=None):
+    def __init__(self, embedding_filename=None, embedding_model=None, word_count_filename=None, word_count_model=None,
+                 clustering_filename=None, clustering_model=None):
         """
         Initialize object.
         Set filename (path to saved model) OR model (initialized model). If both are specified, model is preferred.
@@ -42,6 +43,14 @@ class Extractor:
             self.word_count_model.load(path=word_count_filename)
         else:
             self.word_count_model = None
+
+        if clustering_model is not None:
+            self.clustering_model = clustering_model
+        elif clustering_filename is not None:
+            self.clustering_model = Clusterer(n_clusters=1)
+            self.clustering_model.load(path=clustering_filename)
+        else:
+            self.clustering_model = None
 
     def set_embedding_model(self, embedding_model):
         """
@@ -68,6 +77,19 @@ class Extractor:
         """
         self.word_count_model = WordCount()
         self.word_count_model.load(path=path)
+
+    def set_clustering_model(self, clustering_model):
+        """
+        Set clustering model with initialized Clusterer object
+        """
+        self.clustering_model = clustering_model
+
+    def load_clustering_model(self, path):
+        """
+        Load clustering model from a file (using Clusterer load method)
+        """
+        self.clustering_model = Clusterer()
+        self.clustering_model.load(path=path)
 
     def extract_data(self, data, additional_feature=None, progress_bar=True, with_target=True, as_dataframe=True):
         """
@@ -143,6 +165,11 @@ class Extractor:
                             aspect_chosen_embedding = aspect_embedding
                             sentiment_chosen_embedding = sentiment_embedding
 
+            if self.clustering_model is not None:
+                chosen_embeddings = [aspect_chosen_embedding, sentiment_chosen_embedding, sentence_embedding]
+                chosen_embeddings_cluster = self.clustering_model.predict_one_hot(chosen_embeddings)
+                aspect_chosen_embedding_cluster, sentiment_chosen_embedding_cluster, sentence_embedding_cluster = chosen_embeddings_cluster
+
         # Statistics Feature
         if self.word_count_model is not None:
             result['idf_aspect'] = self._extract_feature_idf(aspect['start'], aspect['length'], tokens)
@@ -153,6 +180,8 @@ class Extractor:
         result['len_sentiment_word'] = sentiment['length']
         result['len_aspect_char'] = self._extract_feature_numchar_sequence(aspect['start'], aspect['length'], tokens)
         result['len_sentiment_char'] = self._extract_feature_numchar_sequence(sentiment['start'], sentiment['length'], tokens)
+
+        # Positional Feature
         result['position_aspect'] = aspect['start']
         result['position_sentiment'] = sentiment['start']
         result['dist_start'] = abs(aspect['start'] - sentiment['start'])
@@ -177,6 +206,15 @@ class Extractor:
                 result['cos_aspect_sentiment'] = max_distance_aspect_sentiment
             result['cos_aspect_sentence'] = self._extract_feature_cosine_distance(aspect_chosen_embedding, sentence_embedding)
             result['cos_sentiment_sentence'] = self._extract_feature_cosine_distance(sentiment_chosen_embedding, sentence_embedding)
+
+        # Clustering Feature
+        if self.embedding_model is not None and self.clustering_model is not None:
+            for i in range(len(aspect_chosen_embedding_cluster)):
+                result['c_aspect_{}'.format(i)] = aspect_chosen_embedding_cluster[i]
+            for i in range(len(sentiment_chosen_embedding_cluster)):
+                result['c_sentiment_{}'.format(i)] = sentiment_chosen_embedding_cluster[i]
+            for i in range(len(sentence_embedding_cluster)):
+                result['c_sentence_{}'.format(i)] = sentence_embedding_cluster[i]
 
         return result
 
