@@ -119,27 +119,27 @@ class Extractor:
         # Intermediate Values
         dictionary_tf = self._extract_feature_dict_tf(tokens)
         if self.embedding_model is not None:
-            aspect_embeddings = [self._extract_featre_vector_word(token)
+            aspect_embeddings = [self._extract_feature_vector_word(token)
                                  for token in tokens[aspect['start']:aspect['start']+aspect['length']]]
-            sentiment_embeddings = [self._extract_featre_vector_word(token)
+            sentiment_embeddings = [self._extract_feature_vector_word(token)
                                     for token in tokens[sentiment['start']:sentiment['start'] + sentiment['length']]]
             sentence_embedding = self._extract_feature_vector_sentence(tokens)
 
             if not np.any(aspect_embeddings) or not np.any(sentiment_embeddings):
-                min_distance_aspect_sentiment = np.nan
+                max_distance_aspect_sentiment = np.nan
                 aspect_chosen_embedding = self._extract_feature_vector_sequence(aspect['start'], aspect['length'], tokens)
                 sentiment_chosen_embedding = self._extract_feature_vector_sequence(sentiment['start'], sentiment['length'], tokens)
             else:
                 aspect_embeddings = [aspect_embedding for aspect_embedding in aspect_embeddings if np.any(aspect_embedding)]
                 sentiment_embeddings = [sentiment_embedding for sentiment_embedding in sentiment_embeddings if np.any(sentiment_embedding)]
-                min_distance_aspect_sentiment = np.inf
+                max_distance_aspect_sentiment = -np.inf
                 aspect_chosen_embedding = None
                 sentiment_chosen_embedding = None
                 for aspect_embedding in aspect_embeddings:
                     for sentiment_embedding in sentiment_embeddings:
                         distance_aspect_sentiment = self._extract_feature_cosine_distance(aspect_embedding, sentiment_embedding)
-                        if distance_aspect_sentiment < min_distance_aspect_sentiment:
-                            min_distance_aspect_sentiment = distance_aspect_sentiment
+                        if distance_aspect_sentiment > max_distance_aspect_sentiment:
+                            max_distance_aspect_sentiment = distance_aspect_sentiment
                             aspect_chosen_embedding = aspect_embedding
                             sentiment_chosen_embedding = sentiment_embedding
 
@@ -169,12 +169,12 @@ class Extractor:
 
         # Similarity Feature
         if self.embedding_model is not None:
-            if np.isnan(min_distance_aspect_sentiment):
+            if np.isnan(max_distance_aspect_sentiment):
                 result['cos_aspect_sentiment_validity'] = 0
                 result['cos_aspect_sentiment'] = Embedding.DEFAULT_COS_DISTANCE
             else:
                 result['cos_aspect_sentiment_validity'] = 1
-                result['cos_aspect_sentiment'] = min_distance_aspect_sentiment
+                result['cos_aspect_sentiment'] = max_distance_aspect_sentiment
             result['cos_aspect_sentence'] = self._extract_feature_cosine_distance(aspect_chosen_embedding, sentence_embedding)
             result['cos_sentiment_sentence'] = self._extract_feature_cosine_distance(sentiment_chosen_embedding, sentence_embedding)
 
@@ -196,7 +196,7 @@ class Extractor:
     def _extract_feature_vector_sentence(self, tokens):
         return self.embedding_model.get_vector_sentence(sentence=tokens)
 
-    def _extract_featre_vector_word(self, token):
+    def _extract_feature_vector_word(self, token):
         return self.embedding_model.get_vector_word(word=token)
 
     @staticmethod
