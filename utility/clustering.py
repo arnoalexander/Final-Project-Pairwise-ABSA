@@ -2,6 +2,7 @@
 Cluster entities
 """
 
+import numpy as np
 from sklearn.cluster import KMeans
 import pickle
 
@@ -51,6 +52,15 @@ class Clusterer:
         Get cluster ID of data
         """
         return self.model.predict(X, *args, **kwargs)
+
+    def predict_one_hot(self, X, *args, **kwargs):
+        """
+        Get one-hot representation of cluster ID
+        """
+        cluster_id = self.predict(X, *args, **kwargs)
+        result = np.zeros((len(X), self.model.n_clusters))
+        result[np.arange(len(X)), cluster_id] = 1
+        return result
 
 
 if __name__ == '__main__':
