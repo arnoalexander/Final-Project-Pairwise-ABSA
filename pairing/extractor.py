@@ -146,8 +146,10 @@ class Extractor:
         dictionary_tf = self._extract_feature_dict_tf(tokens)
 
         if len(tokens) > 1:
-            position_aspect_bin_value = int(aspect['start'] * self.POSITION_PARTITION / (len(tokens) - 1))
-            position_sentiment_bin_value = int(sentiment['start'] * self.POSITION_PARTITION / (len(tokens) - 1))
+            position_aspect_bin_value = int((aspect['start'] + (aspect['length'] - 1) / 2)
+                                            * self.POSITION_PARTITION / (len(tokens) - 1))
+            position_sentiment_bin_value = int((sentiment['start'] + (aspect['length'] - 1) / 2)
+                                               * self.POSITION_PARTITION / (len(tokens) - 1))
         else:
             position_aspect_bin_value = 0
             position_sentiment_bin_value = 0
@@ -210,8 +212,8 @@ class Extractor:
         # 2. Positional Feature
         result['position_aspect'] = aspect['start']
         result['position_sentiment'] = sentiment['start']
-        result['reverse_position_aspect'] = len(tokens) - aspect['start'] - 1
-        result['reverse_position_sentiment'] = len(tokens) - sentiment['start'] - 1
+        result['reverse_position_aspect'] = len(tokens) - aspect['start'] - aspect['length']
+        result['reverse_position_sentiment'] = len(tokens) - sentiment['start'] - aspect['length']
         result['dist_start'] = abs(aspect['start'] - sentiment['start'])
         result['dist_endpoint'] = self._extract_feature_dist_endpoint(aspect, sentiment)
         for i in range(len(position_aspect_bin_vector)):
