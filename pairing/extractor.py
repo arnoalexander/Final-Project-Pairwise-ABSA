@@ -21,6 +21,9 @@ class Extractor:
     Extractor class for pairing task
     """
 
+    # Constants
+    POSITION_PARTITION = 10
+
     def __init__(self, embedding_filename=None, embedding_model=None, word_count_filename=None, word_count_model=None,
                  clustering_filename=None, clustering_model=None):
         """
@@ -140,6 +143,24 @@ class Extractor:
 
         # Intermediate Values
         dictionary_tf = self._extract_feature_dict_tf(tokens)
+
+        if len(tokens) > 1:
+            position_aspect_bin_value = int(aspect['start'] * self.POSITION_PARTITION / (len(tokens) - 1))
+            position_sentiment_bin_value = int(sentiment['start'] * self.POSITION_PARTITION / (len(tokens) - 1))
+        else:
+            position_aspect_bin_value = 0
+            position_sentiment_bin_value = 0
+        position_aspect_bin_vector = np.zeros(self.POSITION_PARTITION)
+        position_sentiment_bin_vector = np.zeros(self.POSITION_PARTITION)
+        if position_aspect_bin_value < self.POSITION_PARTITION:
+            position_aspect_bin_vector[position_aspect_bin_value] = 1
+        else:
+            position_aspect_bin_vector[-1] = 1
+        if position_sentiment_bin_value < self.POSITION_PARTITION:
+            position_sentiment_bin_vector[position_sentiment_bin_value] = 1
+        else:
+            position_sentiment_bin_vector[-1] = 1
+
         if self.embedding_model is not None:
             aspect_embeddings = [self._extract_feature_vector_word(token)
                                  for token in tokens[aspect['start']:aspect['start']+aspect['length']]]
@@ -170,7 +191,7 @@ class Extractor:
                 chosen_embeddings_cluster = self.clustering_model.predict_one_hot(chosen_embeddings)
                 aspect_chosen_embedding_cluster, sentiment_chosen_embedding_cluster, sentence_embedding_cluster = chosen_embeddings_cluster
 
-        # Statistics Feature
+        # 1. Statistics Feature
         if self.word_count_model is not None:
             result['idf_aspect'] = self._extract_feature_idf(aspect['start'], aspect['length'], tokens)
             result['idf_sentiment'] = self._extract_feature_idf(sentiment['start'], sentiment['length'], tokens)
@@ -181,13 +202,19 @@ class Extractor:
         result['len_aspect_char'] = self._extract_feature_numchar_sequence(aspect['start'], aspect['length'], tokens)
         result['len_sentiment_char'] = self._extract_feature_numchar_sequence(sentiment['start'], sentiment['length'], tokens)
 
-        # Positional Feature
+        # 2. Positional Feature
         result['position_aspect'] = aspect['start']
         result['position_sentiment'] = sentiment['start']
+        result['reverse_position_aspect'] = len(tokens) - aspect['start'] - 1
+        result['reverse_position_sentiment'] = len(tokens) - sentiment['start'] - 1
         result['dist_start'] = abs(aspect['start'] - sentiment['start'])
         result['dist_endpoint'] = self._extract_feature_dist_endpoint(aspect, sentiment)
+        for i in range(len(position_aspect_bin_vector)):
+            result['p_aspect_{}'.format(i)] = position_aspect_bin_vector[i]
+        for i in range(len(position_sentiment_bin_vector)):
+            result['p_sentiment_{}'.format(i)] = position_sentiment_bin_vector[i]
 
-        # Semantic Feature
+        # 3. Semantic Feature
         if self.embedding_model is not None:
             for i in range(len(aspect_chosen_embedding)):
                 result['v_aspect_{}'.format(i)] = aspect_chosen_embedding[i]
@@ -196,7 +223,7 @@ class Extractor:
             for i in range(len(sentence_embedding)):
                 result['v_sentence_{}'.format(i)] = sentence_embedding[i]
 
-        # Similarity Feature
+        # 4. Similarity Feature
         if self.embedding_model is not None:
             if np.isnan(max_distance_aspect_sentiment):
                 result['cos_aspect_sentiment_validity'] = 0
@@ -207,7 +234,7 @@ class Extractor:
             result['cos_aspect_sentence'] = self._extract_feature_cosine_distance(aspect_chosen_embedding, sentence_embedding)
             result['cos_sentiment_sentence'] = self._extract_feature_cosine_distance(sentiment_chosen_embedding, sentence_embedding)
 
-        # Clustering Feature
+        # 5. Clustering Feature
         if self.embedding_model is not None and self.clustering_model is not None:
             for i in range(len(aspect_chosen_embedding_cluster)):
                 result['c_aspect_{}'.format(i)] = aspect_chosen_embedding_cluster[i]
