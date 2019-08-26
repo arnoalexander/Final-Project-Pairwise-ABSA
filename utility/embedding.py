@@ -2,7 +2,7 @@
 Represent word into dense vector
 """
 
-from gensim.models import FastText
+from gensim.models import FastText, Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
@@ -17,7 +17,7 @@ class Embedding:
     # Constants
     DEFAULT_COS_DISTANCE = 0
 
-    def __init__(self, *args, model_base=None, model_filename=None, **kwargs):
+    def __init__(self, *args, model_base=None, model_filename=None, fast_text=True, **kwargs):
         """
         Initialize object.
         Set model_filename (path to saved base embedding model) OR model_base(initialized embedding model).
@@ -27,8 +27,10 @@ class Embedding:
             self.model = model_base
         elif model_filename is not None:
             self.load(path=model_filename)
-        else:
+        elif fast_text:
             self.model = FastText(*args, **kwargs)
+        else:
+            self.model = Word2Vec(*args, **kwargs)
 
     def save(self, path):
         """
