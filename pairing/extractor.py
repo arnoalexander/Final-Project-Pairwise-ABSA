@@ -91,7 +91,7 @@ class Extractor:
         """
         Load clustering model from a file (using Clusterer load method)
         """
-        self.clustering_model = Clusterer()
+        self.clustering_model = Clusterer(n_clusters=1)
         self.clustering_model.load(path=path)
 
     def extract_data(self, data, additional_feature=None, progress_bar=True, with_target=True, as_dataframe=True):
@@ -102,9 +102,7 @@ class Extractor:
         if progress_bar:
             data = tqdm(data, desc="Extracting data")
         for idx, sentence in enumerate(data):
-            additional_feature_sentence = {'_id_sentence': idx,
-                                           '_n_aspect': len(sentence['aspect']),
-                                           '_n_sentiment': len(sentence['sentiment'])}
+            additional_feature_sentence = {'_id_sentence': idx}
             if additional_feature is not None:
                 additional_feature_sentence.update(additional_feature)
             result += self.extract_sentence(sentence=sentence,
@@ -120,11 +118,17 @@ class Extractor:
         """
         dict/json of single sentences to tabular data
         """
+        n_aspect = len(sentence['aspect'])
+        n_sentiment = len(sentence['sentiment'])
+
         result = []
         for aspect_idx, aspect in enumerate(sentence['aspect']):
             for sentiment_idx, sentiment in enumerate(sentence['sentiment']):
-                result_element = self._extract_features_aspect_sentiment(
-                    aspect_idx, aspect, sentiment_idx, sentiment, sentence['token'])
+                result_element = self._extract_features_aspect_sentiment(aspect, sentiment, sentence['token'])
+                result_element.update({'_n_aspect': n_aspect,
+                                       '_n_sentiment': n_sentiment,
+                                       '_id_aspect': aspect_idx,
+                                       '_id_sentiment': sentiment_idx})
                 if additional_feature is not None:
                     result_element.update(additional_feature)
                 if with_target:
@@ -139,7 +143,7 @@ class Extractor:
     def _extract_class_aspect_sentiment(aspect_idx, sentiment):
         return 1 if aspect_idx in sentiment['index_aspect'] else 0
 
-    def _extract_features_aspect_sentiment(self, aspect_idx, aspect, sentiment_idx, sentiment, tokens):
+    def _extract_features_aspect_sentiment(self, aspect, sentiment, tokens):
         result = dict()
 
         # Intermediate Values
@@ -193,10 +197,6 @@ class Extractor:
                 chosen_embeddings = [aspect_chosen_embedding, sentiment_chosen_embedding, sentence_embedding]
                 chosen_embeddings_cluster = self.clustering_model.predict_one_hot(chosen_embeddings)
                 aspect_chosen_embedding_cluster, sentiment_chosen_embedding_cluster, sentence_embedding_cluster = chosen_embeddings_cluster
-
-        # 0. Dummy Feature
-        result['_id_aspect'] = aspect_idx
-        result['_id_sentiment'] = sentiment_idx
 
         # 1. Statistics Feature
         if self.word_count_model is not None:
