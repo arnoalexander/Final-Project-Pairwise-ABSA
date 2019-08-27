@@ -43,6 +43,19 @@ class BaseClassifier (BaseEstimator, ClassifierMixin):
                             columns=["predicted_{}".format(label) for label in labels])
 
 
+class BaselineClassifier(BaseClassifier):
+
+    """
+    Pair aspect with closest sentiment
+    """
+
+    def predict(self, X, *args, **kwargs):
+        """
+        Predict label for X. X is dataframe with mandatory column : _id_sentiment & _id_closest_sentiment
+        """
+        return (X['_id_sentiment'] == X['_id_closest_sentiment']).to_numpy().astype(int)
+
+
 class GBClassifier(BaseClassifier):
 
     """
