@@ -123,12 +123,14 @@ class Extractor:
 
         result = []
         for aspect_idx, aspect in enumerate(sentence['aspect']):
+            closest_sentiment_idx = self._extract_feature_closest_sentiment(aspect, sentence['sentiment'])
             for sentiment_idx, sentiment in enumerate(sentence['sentiment']):
                 result_element = self._extract_features_aspect_sentiment(aspect, sentiment, sentence['token'])
                 result_element.update({'_n_aspect': n_aspect,
                                        '_n_sentiment': n_sentiment,
                                        '_id_aspect': aspect_idx,
-                                       '_id_sentiment': sentiment_idx})
+                                       '_id_sentiment': sentiment_idx,
+                                       '_id_closest_sentiment': closest_sentiment_idx})
                 if additional_feature is not None:
                     result_element.update(additional_feature)
                 if with_target:
@@ -253,6 +255,32 @@ class Extractor:
         return result
 
     @staticmethod
+    def _extract_feature_closest_sentiment(aspect, sentiments):
+        def __get_closest_idx(val, arr, idx_start, idx_end):
+            idx_mid = (idx_start + idx_end)//2
+            if val[1] < arr[idx_mid][0]:
+                return __get_closest_idx(val, arr, idx_start, idx_mid)
+            elif val[0] > arr[idx_mid+1][1]:
+                return __get_closest_idx(val, arr, idx_mid + 1, idx_end)
+            else:
+                dist_prev = val[0] - arr[idx_mid][1]
+                dist_next = arr[idx_mid+1][0] - val[1]
+                if dist_prev < dist_next:
+                    return idx_mid
+                else:
+                    return idx_mid + 1
+
+        range_aspect = [aspect['start'], aspect['start'] + aspect['length'] - 1]
+        range_sentiments = [[sentiment['start'], sentiment['start'] + sentiment['length'] - 1]
+                            for sentiment in sentiments]
+        if range_aspect[1] < range_sentiments[0][0]:
+            return 0
+        elif range_aspect[0] > range_sentiments[-1][1]:
+            return len(range_sentiments) - 1
+        else:
+            return __get_closest_idx(range_aspect, range_sentiments, 0, len(range_sentiments) - 1)
+
+    @staticmethod
     def _extract_feature_numchar_sequence(start, length, tokens):
         return sum([len(token) for token in tokens[start:start+length]])
 
@@ -300,6 +328,7 @@ if __name__ == '__main__':
     extractor = Extractor()
     extractor.load_embedding_model(os.path.join(definition.MODEL_UTILITY, 'fasttext_25.bin'))
     extractor.load_word_count_model(os.path.join(definition.MODEL_UTILITY, 'word_count_60.pkl'))
+    extractor.load_clustering_model(os.path.join(definition.MODEL_UTILITY, 'kmeans_10.bin'))
     extracted = extractor.extract_data(data)
     print(extracted.values.shape)
     print(extracted)
