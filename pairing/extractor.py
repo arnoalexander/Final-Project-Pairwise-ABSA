@@ -328,7 +328,7 @@ if __name__ == '__main__':
     extractor = Extractor()
     extractor.load_embedding_model(os.path.join(definition.MODEL_UTILITY, 'fasttext_25.bin'))
     extractor.load_word_count_model(os.path.join(definition.MODEL_UTILITY, 'word_count_60.pkl'))
-    extractor.load_clustering_model(os.path.join(definition.MODEL_UTILITY, 'kmeans_10.bin'))
+    extractor.load_clustering_model(os.path.join(definition.MODEL_UTILITY, 'fasttext_25_kmeans_10.pkl'))
     extracted = extractor.extract_data(data)
     print(extracted.values.shape)
     print(extracted)
