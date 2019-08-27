@@ -16,6 +16,12 @@ class BaseClassifier (BaseEstimator, ClassifierMixin):
     Base class for all classifier
     """
 
+    def save(self, path):
+        pass
+
+    def load(self, path):
+        pass
+
     def fit(self, X, y, *args, **kwargs):
         pass
 
