@@ -94,7 +94,7 @@ class Extractor:
         self.clustering_model = Clusterer(n_clusters=1)
         self.clustering_model.load(path=path)
 
-    def extract_data(self, data, additional_feature=None, progress_bar=True, with_target=True, as_dataframe=True):
+    def extract_data(self, data, additional_feature=None, progress_bar=True, with_target=True, as_dataframe=True, include_new_features=True):
         """
         dict/json list of sentences to tabular data
         """
@@ -108,13 +108,14 @@ class Extractor:
             result += self.extract_sentence(sentence=sentence,
                                             additional_feature=additional_feature_sentence,
                                             with_target=with_target,
-                                            as_dataframe=False)
+                                            as_dataframe=False,
+                                            include_new_features=include_new_features)
 
         if as_dataframe:
             return pd.DataFrame(result)
         return result
 
-    def extract_sentence(self, sentence, additional_feature=None, with_target=True, as_dataframe=True):
+    def extract_sentence(self, sentence, additional_feature=None, with_target=True, as_dataframe=True, include_new_features=True):
         """
         dict/json of single sentences to tabular data
         """
@@ -125,7 +126,7 @@ class Extractor:
         for aspect_idx, aspect in enumerate(sentence['aspect']):
             closest_sentiment_idx = self._extract_feature_closest_sentiment(aspect, sentence['sentiment'])
             for sentiment_idx, sentiment in enumerate(sentence['sentiment']):
-                result_element = self._extract_features_aspect_sentiment(aspect, sentiment, sentence['token'])
+                result_element = self._extract_features_aspect_sentiment(aspect, sentiment, sentence['token'], include_new_features=include_new_features)
                 result_element.update({'_n_aspect': n_aspect,
                                        '_n_sentiment': n_sentiment,
                                        '_id_aspect': aspect_idx,
@@ -145,7 +146,7 @@ class Extractor:
     def _extract_class_aspect_sentiment(aspect_idx, sentiment):
         return 1 if aspect_idx in sentiment['index_aspect'] else 0
 
-    def _extract_features_aspect_sentiment(self, aspect, sentiment, tokens):
+    def _extract_features_aspect_sentiment(self, aspect, sentiment, tokens, include_new_features=True):
         result = dict()
 
         # Intermediate Values
@@ -218,10 +219,11 @@ class Extractor:
         result['reverse_position_sentiment'] = len(tokens) - sentiment['start'] - aspect['length']
         result['dist_start'] = abs(aspect['start'] - sentiment['start'])
         result['dist_endpoint'] = self._extract_feature_dist_endpoint(aspect, sentiment)
-        for i in range(len(position_aspect_bin_vector)):
-            result['p_aspect_{}'.format(i)] = position_aspect_bin_vector[i]
-        for i in range(len(position_sentiment_bin_vector)):
-            result['p_sentiment_{}'.format(i)] = position_sentiment_bin_vector[i]
+        if include_new_features:
+            for i in range(len(position_aspect_bin_vector)):
+                result['p_aspect_{}'.format(i)] = position_aspect_bin_vector[i]
+            for i in range(len(position_sentiment_bin_vector)):
+                result['p_sentiment_{}'.format(i)] = position_sentiment_bin_vector[i]
 
         # 3. Semantic Feature
         if self.embedding_model is not None:
@@ -244,13 +246,13 @@ class Extractor:
             result['cos_sentiment_sentence'] = self._extract_feature_cosine_distance(sentiment_chosen_embedding, sentence_embedding)
 
         # 5. Clustering Feature
-        if self.embedding_model is not None and self.clustering_model is not None:
-            for i in range(len(aspect_chosen_embedding_cluster)):
-                result['c_aspect_{}'.format(i)] = aspect_chosen_embedding_cluster[i]
-            for i in range(len(sentiment_chosen_embedding_cluster)):
-                result['c_sentiment_{}'.format(i)] = sentiment_chosen_embedding_cluster[i]
-            for i in range(len(sentence_embedding_cluster)):
-                result['c_sentence_{}'.format(i)] = sentence_embedding_cluster[i]
+        # if include_new_features and self.embedding_model is not None and self.clustering_model is not None:
+        #     for i in range(len(aspect_chosen_embedding_cluster)):
+        #         result['c_aspect_{}'.format(i)] = aspect_chosen_embedding_cluster[i]
+        #     for i in range(len(sentiment_chosen_embedding_cluster)):
+        #         result['c_sentiment_{}'.format(i)] = sentiment_chosen_embedding_cluster[i]
+        #     for i in range(len(sentence_embedding_cluster)):
+        #         result['c_sentence_{}'.format(i)] = sentence_embedding_cluster[i]
 
         return result
 
